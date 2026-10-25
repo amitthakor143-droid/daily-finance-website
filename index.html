@@ -1,0 +1,3139 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Finance</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{
+    font-family:Arial, sans-serif;
+    margin:0;
+    background:#f3f6f9;
+    color:#222;
+}
+header{
+    background:#1565c0;
+    color:white;
+    padding:15px;
+    text-align:center;
+}
+header h1{
+    margin:0;
+    font-size:25px;
+}
+#cloudStatus{
+    display:inline-block;
+    margin-top:8px;
+    padding:5px 10px;
+    border-radius:14px;
+    background:rgba(255,255,255,.18);
+    font-size:12px;
+}
+nav{
+    display:flex;
+    flex-wrap:wrap;
+    background:#0d47a1;
+}
+nav button{
+    flex:1;
+    min-width:120px;
+    padding:12px;
+    border:0;
+    background:#0d47a1;
+    color:white;
+    cursor:pointer;
+    font-size:15px;
+}
+nav button:hover{
+    background:#1976d2;
+}
+.page{
+    display:none;
+    padding:15px;
+}
+.page.active{
+    display:block;
+}
+.card{
+    background:white;
+    padding:15px;
+    margin-bottom:15px;
+    border-radius:8px;
+    box-shadow:0 2px 7px #ccc;
+}
+h2{
+    margin-top:0;
+    color:#1565c0;
+}
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:10px;
+}
+label{
+    font-weight:bold;
+    display:block;
+    margin-bottom:4px;
+}
+input,select{
+    width:100%;
+    box-sizing:border-box;
+    padding:9px;
+    border:1px solid #aaa;
+    border-radius:5px;
+    font-size:15px;
+}
+button{
+    padding:9px 14px;
+    border:0;
+    border-radius:5px;
+    cursor:pointer;
+    margin:3px;
+    font-size:14px;
+}
+.btn{
+    background:#1565c0;
+    color:white;
+}
+.btn-success{
+    background:#2e7d32;
+    color:white;
+}
+.btn-danger{
+    background:#c62828;
+    color:white;
+}
+.btn-warning{
+    background:#ef6c00;
+    color:white;
+}
+.btn-gray{
+    background:#616161;
+    color:white;
+}
+.stats{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:12px;
+}
+.stat{
+    background:white;
+    padding:15px;
+    text-align:center;
+    border-radius:8px;
+    box-shadow:0 2px 7px #ccc;
+}
+.stat h3{
+    margin:5px 0;
+    color:#1565c0;
+}
+.stat p{
+    font-size:22px;
+    font-weight:bold;
+    margin:5px;
+}
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:12px;
+    background:white;
+}
+th,td{
+    border:1px solid #ccc;
+    padding:8px;
+    text-align:center;
+}
+th{
+    background:#e3f2fd;
+    color:#0d47a1;
+}
+.search{
+    max-width:350px;
+    margin:8px 0;
+}
+.info{
+    background:#e8f5e9;
+    padding:10px;
+    border-radius:5px;
+    margin-top:10px;
+}
+.warning{
+    background:#fff3e0;
+    padding:10px;
+    border-radius:5px;
+    margin-top:10px;
+}
+.total-row{
+    font-weight:bold;
+    background:#fff8e1;
+}
+.small{
+    font-size:13px;
+    color:#555;
+}
+
+.loan-filter-box{
+    background:#f5f9ff;
+    border:1px solid #c5d9f1;
+    padding:12px;
+    border-radius:7px;
+    margin-top:10px;
+    margin-bottom:10px;
+}
+
+.loan-filter-box h3{
+    margin-top:0;
+    color:#1565c0;
+}
+
+.loan-filter-buttons{
+    margin-top:8px;
+}
+
+#loanListPrintArea{
+    margin-top:15px;
+}
+
+@media(max-width:700px){
+    table{
+        font-size:12px;
+    }
+    th,td{
+        padding:5px;
+    }
+}
+
+/* PRINT */
+@media print{
+
+    body *{
+        visibility:hidden;
+    }
+
+    #loanListPrintArea,
+    #loanListPrintArea *{
+        visibility:visible;
+    }
+
+    #loanListPrintArea{
+        position:absolute;
+        left:0;
+        top:0;
+        width:100%;
+    }
+
+    #loanListPrintArea table{
+        width:100%;
+        border-collapse:collapse;
+    }
+
+    #loanListPrintArea th,
+    #loanListPrintArea td{
+        border:1px solid #000;
+        padding:7px;
+        text-align:center;
+    }
+
+    #loanListPrintArea h2{
+        text-align:center;
+        color:#000;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>દૈનિક ફાઇનાન્સ</h1>
+<div id="cloudStatus">☁ Local mode</div>
+</header>
+
+<nav>
+    <button onclick="showPage('dashboard')">મુખ્ય પાનું</button>
+    <button onclick="showPage('customers')">ગ્રાહક વ્યવસ્થાપન</button>
+    <button onclick="showPage('collection')">દૈનિક વસૂલાત</button>
+    <button onclick="showPage('history')">વસૂલાત ઇતિહાસ</button>
+    <button onclick="showPage('reports')">અહેવાલ</button>
+</nav>
+
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="page active">
+
+    <div class="card">
+        <h2>મુખ્ય પાનું</h2>
+
+        <div class="stats">
+
+            <div class="stat">
+                <div>કુલ ગ્રાહકો</div>
+                <p id="dashCustomers">0</p>
+            </div>
+
+            <div class="stat">
+                <div>કુલ લોન</div>
+                <p id="dashLoan">₹0</p>
+            </div>
+
+            <div class="stat">
+                <div>કુલ ચૂકવેલ</div>
+                <p id="dashPaid">₹0</p>
+            </div>
+
+            <div class="stat">
+                <div>કુલ બાકી</div>
+                <p id="dashBaki">₹0</p>
+            </div>
+
+            <div class="stat">
+                <div>આજની વસૂલાત</div>
+                <p id="dashToday">₹0</p>
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="card">
+
+        <h2>ડેટા બેકઅપ</h2>
+
+        <button class="btn-success" onclick="backupData()">
+            બેકઅપ લો
+        </button>
+
+        <button class="btn-warning" onclick="document.getElementById('restoreFile').click()">
+            બેકઅપ પાછો લાવો
+        </button>
+
+        <input type="file" id="restoreFile" accept=".json"
+               style="display:none"
+               onchange="restoreData(event)">
+
+        <p class="small">
+            બેકઅપ ફાઇલ સાચવી રાખશો. બીજા browser અથવા computerમાં
+            ડેટા લઈ જવા માટે તેનો ઉપયોગ કરી શકો છો.
+        </p>
+
+    </div>
+
+</div>
+
+
+<!-- CUSTOMER MANAGEMENT -->
+<div id="customers" class="page">
+
+    <div class="card">
+
+        <h2>ગ્રાહક વ્યવસ્થાપન</h2>
+
+        <input type="hidden" id="editCustomerIndex">
+
+        <div class="form-grid">
+
+            <div>
+                <label>લોન નંબર</label>
+                <input type="text" id="loanNo">
+            </div>
+
+            <div>
+                <label>ગ્રાહક નંબર</label>
+                <input type="text" id="customerNo">
+            </div>
+
+            <div>
+                <label>ગ્રાહકનું નામ</label>
+                <input type="text" id="customerName">
+            </div>
+
+            <div>
+                <label>નવી લોન તારીખ</label>
+                <input type="date" id="loanDate" required>
+            </div>
+
+            <div>
+                <label>લોન રકમ</label>
+                <input type="number" id="loanAmount">
+            </div>
+
+            <div>
+                <label>દૈનિક હપ્તો</label>
+                <input type="number" id="dailyDue">
+            </div>
+
+        </div>
+
+        <br>
+
+        <button class="btn-success" onclick="saveCustomer()">
+            ગ્રાહક સાચવો
+        </button>
+
+        <button class="btn-warning" onclick="updateCustomer()">
+            ફેરફાર સાચવો
+        </button>
+
+        <button class="btn-gray" onclick="newCustomer()">
+            નવું
+        </button>
+
+        <button class="btn-danger" onclick="deleteCustomer()">
+            કાઢી નાખો
+        </button>
+
+        <button class="btn" onclick="importOldData()">
+            📥 જૂનો 31/08/2026 ડેટા Import
+        </button>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>ગ્રાહક શોધો</h2>
+
+        <input class="search"
+               type="text"
+               id="customerSearch"
+               placeholder="લોન નંબર / ગ્રાહક નંબર / નામ"
+               onkeyup="displayCustomers()">
+
+
+        <!-- LOAN LIST FILTER -->
+
+        <div class="loan-filter-box">
+
+            <h3>લોન યાદી માટે સમય પસંદ કરો</h3>
+
+            <div class="form-grid">
+
+                <div>
+                    <label>સમયનો પ્રકાર</label>
+
+                    <select id="loanFilterType"
+                            onchange="changeLoanFilterType()">
+
+                        <option value="date">તારીખ</option>
+                        <option value="month">મહિનો</option>
+                        <option value="year">વર્ષ</option>
+
+                    </select>
+                </div>
+
+
+                <div id="loanDateBox">
+
+                    <label>તારીખ</label>
+
+                    <input type="date"
+                           id="loanFilterDate">
+
+                </div>
+
+
+                <div id="loanMonthBox" style="display:none;">
+
+                    <label>મહિનો</label>
+
+                    <input type="month"
+                           id="loanFilterMonth">
+
+                </div>
+
+
+                <div id="loanYearBox" style="display:none;">
+
+                    <label>વર્ષ</label>
+
+                    <select id="loanFilterYear">
+
+                        <option value="">વર્ષ પસંદ કરો</option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+            <div class="loan-filter-buttons">
+
+                <button class="btn-warning"
+                        onclick="showPendingLoans()">
+                    📋 બાકી લોન
+                </button>
+
+                <button class="btn-success"
+                        onclick="showClosedLoans()">
+                    ✅ પૂર્ણ થયેલી લોન
+                </button>
+
+                <button class="btn"
+                        onclick="showAllLoans()">
+                    📋 બધા ગ્રાહકો
+                </button>
+
+                <button class="btn-gray"
+                        onclick="printLoanList()">
+                    🖨️ Print
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <div id="loanListPrintArea"></div>
+
+
+        <div style="overflow:auto;">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>લોન નંબર</th>
+                        <th>ગ્રાહક નંબર</th>
+                        <th>ગ્રાહકનું નામ</th>
+                        <th>લોન રકમ</th>
+                        <th>દૈનિક હપ્તો</th>
+                        <th>ચૂકવેલ</th>
+                        <th>બાકી</th>
+                        <th>ક્રિયા</th>
+                    </tr>
+                </thead>
+
+                <tbody id="customerTable"></tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- COLLECTION -->
+<div id="collection" class="page">
+
+    <div class="card">
+
+        <h2>દૈનિક વસૂલાત</h2>
+
+        <input type="hidden" id="editCollectionIndex">
+
+        <div class="form-grid">
+
+            <div>
+                <label>વસૂલાત તારીખ</label>
+                <input type="date" id="collectionDate">
+            </div>
+
+            <div>
+                <label>લોન નંબર</label>
+                <input type="text"
+                       id="collectionLoanNo"
+                       oninput="findCollectionCustomer()">
+            </div>
+
+            <div>
+                <label>ગ્રાહક નંબર</label>
+                <input type="text" id="collectionCustomerNo" readonly>
+            </div>
+
+            <div>
+                <label>ગ્રાહકનું નામ</label>
+                <input type="text" id="collectionCustomerName" readonly>
+            </div>
+
+            <div>
+                <label>લોન રકમ</label>
+                <input type="number" id="collectionLoanAmount" readonly>
+            </div>
+
+            <div>
+                <label>પહેલેથી ચૂકવેલ</label>
+                <input type="number" id="collectionAlreadyPaid" readonly>
+            </div>
+
+            <div>
+                <label>હાલની બાકી</label>
+                <input type="number" id="collectionCurrentBaki" readonly>
+            </div>
+
+            <div>
+                <label>વસૂલાત રકમ</label>
+                <input type="number" id="collectionAmount">
+            </div>
+
+        </div>
+
+        <div id="collectionInfo"></div>
+
+        <br>
+
+        <button class="btn-success" onclick="saveCollection()">
+            વસૂલાત સાચવો
+        </button>
+
+        <button class="btn-warning" onclick="updateCollection()">
+            ફેરફાર સાચવો
+        </button>
+
+        <button class="btn-gray" onclick="newCollection()">
+            નવું
+        </button>
+
+        <button class="btn-danger" onclick="cancelCollectionEdit()">
+            રદ કરો
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- HISTORY -->
+<div id="history" class="page">
+
+    <div class="card">
+
+        <h2>વસૂલાત ઇતિહાસ</h2>
+
+        <input class="search"
+               type="text"
+               id="historySearch"
+               placeholder="તારીખ / લોન નંબર / ગ્રાહકનું નામ"
+               onkeyup="displayHistory()">
+
+        <div style="overflow:auto;">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>તારીખ</th>
+                        <th>લોન નંબર</th>
+                        <th>ગ્રાહક</th>
+                        <th>રકમ</th>
+                        <th>ક્રિયા</th>
+                    </tr>
+                </thead>
+
+                <tbody id="historyTable"></tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- REPORTS -->
+<div id="reports" class="page">
+
+    <div class="card">
+
+        <h2>અહેવાલ</h2>
+
+        <h3>1. તારીખ મુજબ વસૂલાત અહેવાલ</h3>
+
+        <div class="form-grid">
+
+            <div>
+                <label>તારીખ</label>
+                <input type="date" id="reportDate"
+                       onchange="dateWiseReport()">
+            </div>
+
+        </div>
+
+        <div id="dateWiseResult"></div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3>2. માસિક વસૂલાત અહેવાલ</h3>
+
+        <div class="form-grid">
+
+            <div>
+                <label>મહિનો</label>
+                <input type="month"
+                       id="reportMonth"
+                       onchange="monthlyReport()">
+            </div>
+
+        </div>
+
+        <div id="monthlyResult"></div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3>3. ગ્રાહક માસિક સારાંશ</h3>
+
+        <div class="form-grid">
+
+            <div>
+                <label>તારીખથી</label>
+                <input type="date" id="summaryFrom">
+            </div>
+
+            <div>
+                <label>તારીખ સુધી</label>
+                <input type="date" id="summaryTo">
+            </div>
+
+        </div>
+
+        <br>
+
+        <button class="btn"
+                onclick="customerMonthlySummary()">
+            ગ્રાહક અહેવાલ બતાવો
+        </button>
+
+        <button class="btn-success"
+                onclick="printCustomerMonthlySummary()">
+            🖨 અહેવાલ પ્રિન્ટ કરો
+        </button>
+
+        <div id="customerSummaryResult"></div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   ONLINE DATABASE SETTINGS - SUPABASE
+   1) Create a Supabase project.
+   2) Run the SQL supplied with this app.
+   3) Paste your Project URL and ANON/PUBLISHABLE key below.
+   Never paste your service_role/secret key into this HTML.
+   ========================================================= */
+var SUPABASE_URL = "https://xxulytekllkliopixfvj.supabase.co";
+var SUPABASE_ANON_KEY = "sb_publishable_QtsnWYAt_OAihn8aqNBYFA_pyDr_jTh";
+
+var supabaseClient = null;
+var onlineMode = false;
+var syncQueue = Promise.resolve();
+var serverCustomerIds = new Set();
+var serverCollectionIds = new Set();
+
+var customers =
+JSON.parse(
+    localStorage.getItem("dailyFinanceCustomersFresh2")
+) || [];
+
+var collections =
+JSON.parse(
+    localStorage.getItem("dailyFinanceCollectionsFresh2")
+) || [];
+
+function setCloudStatus(text){
+    var el = document.getElementById("cloudStatus");
+    if(el){ el.innerText = text; }
+}
+
+function makeId(){
+    if(window.crypto && crypto.randomUUID){
+        return crypto.randomUUID();
+    }
+    return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+}
+
+function prepareLocalIds(){
+    customers.forEach(function(c){ if(!c.id) c.id = makeId(); });
+    collections.forEach(function(c){ if(!c.id) c.id = makeId(); });
+}
+
+function isSupabaseConfigured(){
+    return SUPABASE_URL.indexOf("PASTE_") !== 0 &&
+           SUPABASE_ANON_KEY.indexOf("PASTE_") !== 0;
+}
+
+function initOnline(){
+    if(!isSupabaseConfigured() || !window.supabase){
+        setCloudStatus("☁ Local mode — Supabase setup બાકી");
+        return false;
+    }
+    try{
+        supabaseClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_ANON_KEY
+        );
+        onlineMode = true;
+        setCloudStatus("☁ Online database");
+        return true;
+    }catch(err){
+        onlineMode = false;
+        setCloudStatus("☁ Local mode — connection error");
+        return false;
+    }
+}
+
+function saveLocalData(){
+    localStorage.setItem(
+        "dailyFinanceCustomersFresh2",
+        JSON.stringify(customers)
+    );
+    localStorage.setItem(
+        "dailyFinanceCollectionsFresh2",
+        JSON.stringify(collections)
+    );
+}
+
+async function loadFromServer(){
+    if(!onlineMode){
+        prepareLocalIds();
+        saveLocalData();
+        return;
+    }
+
+    setCloudStatus("☁ Serverમાંથી data લોડ થઈ રહ્યો છે...");
+
+    var cr = await supabaseClient
+        .from("customers")
+        .select("*")
+        .order("loan_no");
+    if(cr.error) throw cr.error;
+
+    var rr = await supabaseClient
+        .from("collections")
+        .select("*")
+        .order("date")
+        .order("created_at");
+    if(rr.error) throw rr.error;
+
+    var serverCustomers = (cr.data || []).map(function(c){
+        return {
+            id:c.id,
+            loanNo:String(c.loan_no),
+            customerNo:String(c.customer_no),
+            name:c.name || "",
+            loanAmount:Number(c.loan_amount) || 0,
+            dailyDue:Number(c.daily_due) || 0,
+            loanDate:c.loan_date || ""
+        };
+    });
+
+    var serverCollections = (rr.data || []).map(function(c){
+        return {
+            id:c.id,
+            date:c.date,
+            loanNo:String(c.loan_no),
+            amount:Number(c.amount) || 0
+        };
+    });
+
+    serverCustomerIds = new Set(serverCustomers.map(function(c){return c.id;}));
+    serverCollectionIds = new Set(serverCollections.map(function(c){return c.id;}));
+
+    if(serverCustomers.length || serverCollections.length){
+        customers = serverCustomers;
+        collections = serverCollections;
+        saveLocalData();
+        setCloudStatus("☁ Online database — synced");
+        return;
+    }
+
+    prepareLocalIds();
+    saveLocalData();
+    if(customers.length || collections.length){
+        if(confirm("Online database ખાલી છે. આ deviceનો હાલનો data server પર upload કરવો છે?")){
+            await syncToServer();
+            setCloudStatus("☁ Online database — uploaded");
+        }else{
+            setCloudStatus("☁ Online database — empty");
+        }
+    }else{
+        setCloudStatus("☁ Online database — ready");
+    }
+}
+
+async function syncToServer(){
+    if(!onlineMode) return;
+    prepareLocalIds();
+    saveLocalData();
+
+    var customerRows = customers.map(function(c){
+        return {
+            id:c.id,
+            loan_no:String(c.loanNo),
+            customer_no:String(c.customerNo),
+            name:String(c.name || ""),
+            loan_amount:Number(c.loanAmount) || 0,
+            daily_due:Number(c.dailyDue) || 0,
+            loan_date:c.loanDate || null
+        };
+    });
+
+    var collectionRows = collections.map(function(c){
+        return {
+            id:c.id,
+            date:c.date,
+            loan_no:String(c.loanNo),
+            amount:Number(c.amount) || 0
+        };
+    });
+
+    if(customerRows.length){
+        var cu = await supabaseClient.from("customers").upsert(customerRows,{onConflict:"id"});
+        if(cu.error) throw cu.error;
+    }
+    if(collectionRows.length){
+        var co = await supabaseClient.from("collections").upsert(collectionRows,{onConflict:"id"});
+        if(co.error) throw co.error;
+    }
+
+    var currentCustomerIds = new Set(customerRows.map(function(c){return c.id;}));
+    var currentCollectionIds = new Set(collectionRows.map(function(c){return c.id;}));
+
+    var oldCustomerIds = Array.from(serverCustomerIds).filter(function(id){return !currentCustomerIds.has(id);});
+    var oldCollectionIds = Array.from(serverCollectionIds).filter(function(id){return !currentCollectionIds.has(id);});
+
+    if(oldCustomerIds.length){
+        var cd = await supabaseClient.from("customers").delete().in("id",oldCustomerIds);
+        if(cd.error) throw cd.error;
+    }
+    if(oldCollectionIds.length){
+        var rd = await supabaseClient.from("collections").delete().in("id",oldCollectionIds);
+        if(rd.error) throw rd.error;
+    }
+
+    serverCustomerIds = currentCustomerIds;
+    serverCollectionIds = currentCollectionIds;
+    setCloudStatus("☁ Online database — saved");
+}
+
+function saveData(){
+    prepareLocalIds();
+    saveLocalData();
+    if(onlineMode){
+        syncQueue = syncQueue.then(syncToServer).catch(function(err){
+            console.error(err);
+            setCloudStatus("☁ Sync error — local data saved");
+            alert("Server પર data save કરવામાં ભૂલ આવી. Local data હાલ સાચવાયો છે.");
+        });
+    }
+}
+
+
+function money(n){
+
+    n = Number(n) || 0;
+
+    return "₹" + n.toLocaleString("en-IN",{
+        minimumFractionDigits:0,
+        maximumFractionDigits:2
+    });
+
+}
+
+
+function todayString(){
+
+    var d = new Date();
+
+    var y = d.getFullYear();
+
+    var m = String(d.getMonth()+1).padStart(2,"0");
+
+    var day = String(d.getDate()).padStart(2,"0");
+
+    return y + "-" + m + "-" + day;
+
+}
+
+
+function showPage(id){
+
+    document.querySelectorAll(".page")
+        .forEach(function(p){
+            p.classList.remove("active");
+        });
+
+    document.getElementById(id)
+        .classList.add("active");
+
+    refreshAll();
+
+}
+
+
+function getCustomerPaid(loanNo){
+
+    var total = 0;
+
+    collections.forEach(function(c){
+
+        if(String(c.loanNo) === String(loanNo)){
+            total += Number(c.amount) || 0;
+        }
+
+    });
+
+    return total;
+
+}
+
+
+/* SELECTED PERIOD PAID */
+
+function getPaidUntilDate(loanNo,endDate){
+
+    var total = 0;
+
+    collections.forEach(function(c){
+
+        if(
+            String(c.loanNo) === String(loanNo) &&
+            c.date <= endDate
+        ){
+
+            total += Number(c.amount) || 0;
+
+        }
+
+    });
+
+    return total;
+
+}
+
+
+function getCustomer(loanNo){
+
+    return customers.find(function(c){
+
+        return String(c.loanNo) === String(loanNo);
+
+    });
+
+}
+
+
+/* CUSTOMER */
+
+function saveCustomer(){
+
+    var loanNo =
+        document.getElementById("loanNo").value.trim();
+
+    var customerNo =
+        document.getElementById("customerNo").value.trim();
+
+    var name =
+        document.getElementById("customerName").value.trim();
+
+    var loanDate =
+        document.getElementById("loanDate").value;
+
+    var loanAmount =
+        Number(document.getElementById("loanAmount").value);
+
+    var dailyDue =
+        Number(document.getElementById("dailyDue").value);
+
+
+    if(!loanNo || !customerNo || !name || !loanDate || !loanAmount){
+
+        alert("કૃપા કરીને જરૂરી માહિતી ભરો.");
+
+        return;
+
+    }
+
+
+    var duplicateLoan =
+        customers.some(function(c){
+            return String(c.loanNo) === String(loanNo);
+        });
+
+    if(duplicateLoan){
+
+        alert("આ લોન નંબર પહેલેથી જ છે.");
+
+        return;
+
+    }
+
+
+    var duplicateCustomer =
+        customers.some(function(c){
+            return String(c.customerNo) === String(customerNo);
+        });
+
+    if(duplicateCustomer){
+
+        alert("આ ગ્રાહક નંબર પહેલેથી જ છે.");
+
+        return;
+
+    }
+
+
+    customers.push({
+
+        loanNo:loanNo,
+        customerNo:customerNo,
+        name:name,
+        loanDate:loanDate,
+        loanAmount:loanAmount,
+        dailyDue:dailyDue
+
+    });
+
+
+    saveData();
+
+    alert("ગ્રાહક સફળતાપૂર્વક સાચવાયો.");
+
+    newCustomer();
+
+    refreshAll();
+
+}
+
+
+function displayCustomers(){
+
+    var search =
+        document.getElementById("customerSearch")
+        .value.toLowerCase();
+
+    var html = "";
+
+
+    customers.forEach(function(c,index){
+
+        var paid =
+            getCustomerPaid(c.loanNo);
+
+        var baki =
+            Math.max(
+                0,
+                Number(c.loanAmount) - paid
+            );
+
+
+        var text =
+            (
+                String(c.loanNo) + " " +
+                String(c.customerNo) + " " +
+                String(c.name)
+            ).toLowerCase();
+
+
+        if(search && !text.includes(search)){
+            return;
+        }
+
+
+        html += "<tr>";
+
+        html += "<td>" + c.loanNo + "</td>";
+
+        html += "<td>" + c.customerNo + "</td>";
+
+        html += "<td>" + c.name + "</td>";
+
+        html += "<td>" + money(c.loanAmount) + "</td>";
+
+        html += "<td>" + money(c.dailyDue) + "</td>";
+
+        html += "<td>" + money(paid) + "</td>";
+
+        html += "<td>" + money(baki) + "</td>";
+
+        html += "<td>";
+
+        html +=
+            "<button class='btn' onclick='editCustomer("+
+            index+
+            ")'>ફેરફાર</button>";
+
+        html +=
+            "<button class='btn-danger' onclick='deleteCustomerByIndex("+
+            index+
+            ")'>કાઢો</button>";
+
+        html += "</td>";
+
+        html += "</tr>";
+
+    });
+
+
+    document.getElementById("customerTable")
+        .innerHTML = html;
+
+}
+
+
+function editCustomer(index){
+
+    var c = customers[index];
+
+    document.getElementById("editCustomerIndex")
+        .value = index;
+
+    document.getElementById("loanNo")
+        .value = c.loanNo;
+
+    document.getElementById("customerNo")
+        .value = c.customerNo;
+
+    document.getElementById("customerName")
+        .value = c.name;
+
+    document.getElementById("loanDate")
+        .value = c.loanDate || "";
+
+    document.getElementById("loanAmount")
+        .value = c.loanAmount;
+
+    document.getElementById("dailyDue")
+        .value = c.dailyDue;
+
+    showPage("customers");
+
+}
+
+
+function updateCustomer(){
+
+    var index =
+        document.getElementById("editCustomerIndex").value;
+
+    if(index === ""){
+
+        alert("પહેલા ગ્રાહક પસંદ કરો.");
+
+        return;
+
+    }
+
+
+    var loanNo =
+        document.getElementById("loanNo").value.trim();
+
+    var customerNo =
+        document.getElementById("customerNo").value.trim();
+
+    var name =
+        document.getElementById("customerName").value.trim();
+
+    var loanDate =
+        document.getElementById("loanDate").value;
+
+    var loanAmount =
+        Number(document.getElementById("loanAmount").value);
+
+    var dailyDue =
+        Number(document.getElementById("dailyDue").value);
+
+
+    if(!loanNo || !customerNo || !name || !loanDate || !loanAmount){
+
+        alert("કૃપા કરીને જરૂરી માહિતી ભરો.");
+
+        return;
+
+    }
+
+
+    var duplicateLoan =
+        customers.some(function(c,i){
+
+            return i != index &&
+                   String(c.loanNo) === String(loanNo);
+
+        });
+
+
+    if(duplicateLoan){
+
+        alert("આ લોન નંબર પહેલેથી જ છે.");
+
+        return;
+
+    }
+
+
+    var duplicateCustomer =
+        customers.some(function(c,i){
+
+            return i != index &&
+                   String(c.customerNo) === String(customerNo);
+
+        });
+
+
+    if(duplicateCustomer){
+
+        alert("આ ગ્રાહક નંબર પહેલેથી જ છે.");
+
+        return;
+
+    }
+
+
+    customers[index] = {
+
+        loanNo:loanNo,
+        customerNo:customerNo,
+        name:name,
+        loanDate:loanDate,
+        loanAmount:loanAmount,
+        dailyDue:dailyDue
+
+    };
+
+
+    saveData();
+
+    alert("ગ્રાહકની માહિતી અપડેટ થઈ.");
+
+    newCustomer();
+
+    refreshAll();
+
+}
+
+
+function deleteCustomer(){
+
+    var index =
+        document.getElementById("editCustomerIndex").value;
+
+    if(index === ""){
+
+        alert("પહેલા ગ્રાહક પસંદ કરો.");
+
+        return;
+
+    }
+
+    deleteCustomerByIndex(index);
+
+}
+
+
+function deleteCustomerByIndex(index){
+
+    var c = customers[index];
+
+    if(!confirm(
+        "શું તમે " + c.name +
+        " નો ગ્રાહક રેકોર્ડ કાઢવા માંગો છો?"
+    )){
+
+        return;
+
+    }
+
+
+    customers.splice(index,1);
+
+
+    saveData();
+
+    newCustomer();
+
+    refreshAll();
+
+}
+
+
+function newCustomer(){
+
+    document.getElementById("editCustomerIndex")
+        .value = "";
+
+    document.getElementById("loanNo")
+        .value = "";
+
+    document.getElementById("customerNo")
+        .value = "";
+
+    document.getElementById("customerName")
+        .value = "";
+
+    document.getElementById("loanDate")
+        .value = todayString();
+
+    document.getElementById("loanAmount")
+        .value = "";
+
+    document.getElementById("dailyDue")
+        .value = "";
+
+}
+
+/* =========================================
+   DATE / MONTH / YEAR FILTER
+   ========================================= */
+
+function changeLoanFilterType(){
+
+    var type =
+        document.getElementById("loanFilterType").value;
+
+
+    document.getElementById("loanDateBox")
+        .style.display =
+        type === "date" ? "block" : "none";
+
+
+    document.getElementById("loanMonthBox")
+        .style.display =
+        type === "month" ? "block" : "none";
+
+
+    document.getElementById("loanYearBox")
+        .style.display =
+        type === "year" ? "block" : "none";
+
+}
+
+
+/* GET END DATE */
+
+function getLoanFilterEndDate(){
+
+    var type =
+        document.getElementById("loanFilterType").value;
+
+
+    if(type === "date"){
+
+        return document.getElementById("loanFilterDate").value;
+
+    }
+
+
+    if(type === "month"){
+
+        var month =
+            document.getElementById("loanFilterMonth").value;
+
+
+        if(!month){
+            return "";
+        }
+
+
+        var p = month.split("-");
+
+        var year = Number(p[0]);
+
+        var mon = Number(p[1]);
+
+
+        var lastDay =
+            new Date(year,mon,0).getDate();
+
+
+        return (
+            year +
+            "-" +
+            String(mon).padStart(2,"0") +
+            "-" +
+            String(lastDay).padStart(2,"0")
+        );
+
+    }
+
+
+    if(type === "year"){
+
+        var year =
+            document.getElementById("loanFilterYear").value;
+
+
+        if(!year){
+            return "";
+        }
+
+
+        return year + "-12-31";
+
+    }
+
+
+    return "";
+
+}
+
+
+/* DISPLAY PERIOD NAME */
+
+function getLoanFilterTitle(){
+
+    var type =
+        document.getElementById("loanFilterType").value;
+
+
+    if(type === "date"){
+
+        var date =
+            document.getElementById("loanFilterDate").value;
+
+        if(!date){
+            return "તારીખ પસંદ કરો";
+        }
+
+        return "તારીખ: " + formatDate(date);
+
+    }
+
+
+    if(type === "month"){
+
+        var month =
+            document.getElementById("loanFilterMonth").value;
+
+        if(!month){
+            return "મહિનો પસંદ કરો";
+        }
+
+        var p = month.split("-");
+
+        var monthNames = [
+            "",
+            "જાન્યુઆરી",
+            "ફેબ્રુઆરી",
+            "માર્ચ",
+            "એપ્રિલ",
+            "મે",
+            "જૂન",
+            "જુલાઈ",
+            "ઓગસ્ટ",
+            "સપ્ટેમ્બર",
+            "ઓક્ટોબર",
+            "નવેમ્બર",
+            "ડિસેમ્બર"
+        ];
+
+        return "મહિનો: " +
+               monthNames[Number(p[1])] +
+               " " +
+               p[0];
+
+    }
+
+
+    if(type === "year"){
+
+        var year =
+            document.getElementById("loanFilterYear").value;
+
+        if(!year){
+            return "વર્ષ પસંદ કરો";
+        }
+
+        return "વર્ષ: " + year;
+
+    }
+
+}
+
+
+/* CREATE YEAR LIST */
+
+function loadLoanYears(){
+
+    var select =
+        document.getElementById("loanFilterYear");
+
+
+    var currentYear =
+        new Date().getFullYear();
+
+
+    var html =
+        "<option value=''>વર્ષ પસંદ કરો</option>";
+
+
+    for(
+        var y = currentYear - 10;
+        y <= currentYear + 2;
+        y++
+    ){
+
+        html +=
+            "<option value='" +
+            y +
+            "'>" +
+            y +
+            "</option>";
+
+    }
+
+
+    select.innerHTML = html;
+
+}
+
+
+/* =========================================
+   PENDING / CLOSED / ALL LOAN LIST
+   ========================================= */
+
+var loanListMode = "pending";
+
+
+function showPendingLoans(){
+
+    loanListMode = "pending";
+
+    displayLoanList();
+
+}
+
+
+function showClosedLoans(){
+
+    loanListMode = "closed";
+
+    displayLoanList();
+
+}
+
+
+function showAllLoans(){
+
+    loanListMode = "all";
+
+    displayLoanList();
+
+}
+
+
+function displayLoanList(){
+
+    var endDate =
+        getLoanFilterEndDate();
+
+
+    if(!endDate){
+
+        alert("પહેલા તારીખ / મહિનો / વર્ષ પસંદ કરો.");
+
+        return;
+
+    }
+
+
+    var search =
+        document.getElementById("customerSearch")
+        .value.toLowerCase();
+
+
+    var title = "";
+
+
+    if(loanListMode === "pending"){
+
+        title = "બાકી લોનની યાદી";
+
+    }
+    else if(loanListMode === "closed"){
+
+        title = "પૂર્ણ થયેલી લોનની યાદી";
+
+    }
+    else{
+
+        title = "બધા ગ્રાહકોની યાદી";
+
+    }
+
+
+    var html = "";
+
+
+    html += "<h2>" + title + "</h2>";
+
+    html +=
+        "<p><b>" +
+        getLoanFilterTitle() +
+        "</b></p>";
+
+
+    html += "<table>";
+
+    html += "<tr>";
+
+    html += "<th>લોન નંબર</th>";
+
+    html += "<th>ગ્રાહક નંબર</th>";
+
+    html += "<th>ગ્રાહકનું નામ</th>";
+
+    html += "<th>કુલ લોન રકમ</th>";
+
+    html += "<th>દૈનિક હપ્તો</th>";
+
+    html += "<th>તે સમય સુધી ચૂકવેલ</th>";
+
+    html += "<th>તે સમય સુધી બાકી</th>";
+
+    html += "</tr>";
+
+
+    var totalLoan = 0;
+
+    var totalPaid = 0;
+
+    var totalBaki = 0;
+
+    var count = 0;
+
+
+    customers.forEach(function(c){
+
+        var text =
+            (
+                String(c.loanNo) + " " +
+                String(c.customerNo) + " " +
+                String(c.name)
+            ).toLowerCase();
+
+
+        if(search && !text.includes(search)){
+
+            return;
+
+        }
+
+
+        /*
+          પસંદ કરેલી તારીખ સુધીની
+          કુલ વસૂલાત
+        */
+
+        var paid =
+            getPaidUntilDate(
+                c.loanNo,
+                endDate
+            );
+
+
+        var baki =
+            Math.max(
+                0,
+                Number(c.loanAmount) - paid
+            );
+
+
+        /* PENDING */
+
+        if(
+            loanListMode === "pending" &&
+            baki <= 0
+        ){
+
+            return;
+
+        }
+
+
+        /* CLOSED */
+
+        if(
+            loanListMode === "closed" &&
+            baki > 0
+        ){
+
+            return;
+
+        }
+
+
+        count++;
+
+
+        totalLoan +=
+            Number(c.loanAmount) || 0;
+
+
+        totalPaid += paid;
+
+
+        totalBaki += baki;
+
+
+        html += "<tr>";
+
+        html += "<td>" + c.loanNo + "</td>";
+
+        html += "<td>" + c.customerNo + "</td>";
+
+        html += "<td>" + c.name + "</td>";
+
+        html += "<td>" + money(c.loanAmount) + "</td>";
+
+        html += "<td>" + money(c.dailyDue) + "</td>";
+
+        html += "<td>" + money(paid) + "</td>";
+
+        html += "<td>" + money(baki) + "</td>";
+
+        html += "</tr>";
+
+    });
+
+
+    if(count === 0){
+
+        html +=
+            "<tr>" +
+            "<td colspan='7'>" +
+            "આ સમયગાળા માટે કોઈ ગ્રાહક મળ્યો નથી." +
+            "</td>" +
+            "</tr>";
+
+    }
+
+
+    html +=
+
+        "<tr class='total-row'>" +
+
+        "<td colspan='3'>કુલ</td>" +
+
+        "<td>" + money(totalLoan) + "</td>" +
+
+        "<td></td>" +
+
+        "<td>" + money(totalPaid) + "</td>" +
+
+        "<td>" + money(totalBaki) + "</td>" +
+
+        "</tr>";
+
+
+    html += "</table>";
+
+
+    document.getElementById(
+        "loanListPrintArea"
+    ).innerHTML = html;
+
+}
+
+
+/* PRINT LOAN LIST */
+
+function printLoanList(){
+
+    var endDate =
+        getLoanFilterEndDate();
+
+
+    if(!endDate){
+
+        alert("પહેલા તારીખ / મહિનો / વર્ષ પસંદ કરો.");
+
+        return;
+
+    }
+
+
+    displayLoanList();
+
+
+    var area =
+        document.getElementById(
+            "loanListPrintArea"
+        );
+
+
+    if(!area){
+
+        alert("Loan list મળતી નથી.");
+
+        return;
+
+    }
+
+
+    var title = "";
+
+
+    if(loanListMode === "pending"){
+
+        title = "બાકી લોનની યાદી";
+
+    }
+    else if(loanListMode === "closed"){
+
+        title = "પૂર્ણ થયેલી લોનની યાદી";
+
+    }
+    else{
+
+        title = "બધા ગ્રાહકોની યાદી";
+
+    }
+
+
+    var printWindow =
+        window.open("", "_blank");
+
+
+    if(!printWindow){
+
+        alert(
+            "Print window ખુલ્યું નથી. Browser માં popup allow કરો."
+        );
+
+        return;
+
+    }
+
+
+    printWindow.document.write(
+
+        "<html>" +
+
+        "<head>" +
+
+        "<title>" +
+        title +
+        "</title>" +
+
+        "<style>" +
+
+        "@page{" +
+        "size:A4 landscape;" +
+        "margin:15mm;" +
+        "}" +
+
+        "body{" +
+        "font-family:Arial,sans-serif;" +
+        "}" +
+
+        "h2{" +
+        "text-align:center;" +
+        "color:#000;" +
+        "}" +
+
+        "p{" +
+        "text-align:center;" +
+        "}" +
+
+        "table{" +
+        "width:100%;" +
+        "border-collapse:collapse;" +
+        "}" +
+
+        "th,td{" +
+        "border:1px solid #000;" +
+        "padding:7px;" +
+        "text-align:center;" +
+        "}" +
+
+        "th{" +
+        "background:#eee;" +
+        "}" +
+
+        ".total-row{" +
+        "font-weight:bold;" +
+        "background:#f5f5f5;" +
+        "}" +
+
+        "</style>" +
+
+        "</head>" +
+
+        "<body>" +
+
+        "<h2>દૈનિક ફાઇનાન્સ</h2>" +
+
+        area.innerHTML +
+
+        "</body>" +
+
+        "</html>"
+
+    );
+
+
+    printWindow.document.close();
+
+    printWindow.focus();
+
+
+    setTimeout(function(){
+
+        printWindow.print();
+
+    },500);
+
+}
+
+
+/* COLLECTION */
+
+function findCollectionCustomer(){
+
+    var loanNo =
+        document.getElementById("collectionLoanNo")
+        .value.trim();
+
+    var c = getCustomer(loanNo);
+
+
+    if(!c){
+
+        document.getElementById("collectionCustomerNo").value="";
+        document.getElementById("collectionCustomerName").value="";
+        document.getElementById("collectionLoanAmount").value="";
+        document.getElementById("collectionAlreadyPaid").value="";
+        document.getElementById("collectionCurrentBaki").value="";
+
+        document.getElementById("collectionInfo")
+            .innerHTML =
+            "<div class='warning'>લોન નંબર મળ્યો નથી.</div>";
+
+        return;
+
+    }
+
+
+    var paid =
+        getCustomerPaid(c.loanNo);
+
+    var baki =
+        Math.max(
+            0,
+            Number(c.loanAmount) - paid
+        );
+
+
+    document.getElementById("collectionCustomerNo")
+        .value = c.customerNo;
+
+    document.getElementById("collectionCustomerName")
+        .value = c.name;
+
+    document.getElementById("collectionLoanAmount")
+        .value = c.loanAmount;
+
+    document.getElementById("collectionAlreadyPaid")
+        .value = paid;
+
+    document.getElementById("collectionCurrentBaki")
+        .value = baki;
+
+
+    document.getElementById("collectionInfo")
+        .innerHTML =
+        "<div class='info'>" +
+        "ગ્રાહક: <b>" + c.name + "</b> | " +
+        "દૈનિક હપ્તો: <b>" + money(c.dailyDue) + "</b>" +
+        "</div>";
+
+}
+
+
+function saveCollection(){
+
+    var date =
+        document.getElementById("collectionDate").value;
+
+    var loanNo =
+        document.getElementById("collectionLoanNo")
+        .value.trim();
+
+    var amount =
+        Number(
+            document.getElementById("collectionAmount").value
+        );
+
+
+    var c = getCustomer(loanNo);
+
+
+    if(!date || !loanNo || !c || !amount){
+
+        alert("કૃપા કરીને યોગ્ય માહિતી ભરો.");
+
+        return;
+
+    }
+
+
+    var paid =
+        getCustomerPaid(loanNo);
+
+    var baki =
+        Number(c.loanAmount) - paid;
+
+
+    if(amount > baki){
+
+        alert(
+            "વસૂલાત રકમ બાકી રકમ કરતાં વધારે ન હોઈ શકે."
+        );
+
+        return;
+
+    }
+
+
+    collections.push({
+
+        date:date,
+        loanNo:loanNo,
+        amount:amount
+
+    });
+
+
+    saveData();
+
+    alert("વસૂલાત સફળતાપૂર્વક સાચવાઈ.");
+
+    newCollection();
+
+    refreshAll();
+
+}
+
+
+function newCollection(){
+
+    document.getElementById("editCollectionIndex")
+        .value = "";
+
+    document.getElementById("collectionDate")
+        .value = todayString();
+
+    document.getElementById("collectionLoanNo")
+        .value = "";
+
+    document.getElementById("collectionCustomerNo")
+        .value = "";
+
+    document.getElementById("collectionCustomerName")
+        .value = "";
+
+    document.getElementById("collectionLoanAmount")
+        .value = "";
+
+    document.getElementById("collectionAlreadyPaid")
+        .value = "";
+
+    document.getElementById("collectionCurrentBaki")
+        .value = "";
+
+    document.getElementById("collectionAmount")
+        .value = "";
+
+    document.getElementById("collectionInfo")
+        .innerHTML = "";
+
+}
+
+
+function editCollection(index){
+
+    var c = collections[index];
+
+    document.getElementById("editCollectionIndex")
+        .value = index;
+
+    document.getElementById("collectionDate")
+        .value = c.date;
+
+    document.getElementById("collectionLoanNo")
+        .value = c.loanNo;
+
+    document.getElementById("collectionAmount")
+        .value = c.amount;
+
+    findCollectionCustomer();
+
+    showPage("collection");
+
+}
+
+
+function updateCollection(){
+
+    var index =
+        document.getElementById("editCollectionIndex").value;
+
+    if(index === ""){
+
+        alert("પહેલા વસૂલાત પસંદ કરો.");
+
+        return;
+
+    }
+
+
+    var date =
+        document.getElementById("collectionDate").value;
+
+    var loanNo =
+        document.getElementById("collectionLoanNo")
+        .value.trim();
+
+    var amount =
+        Number(
+            document.getElementById("collectionAmount").value
+        );
+
+
+    var c = getCustomer(loanNo);
+
+
+    if(!date || !loanNo || !c || !amount){
+
+        alert("કૃપા કરીને યોગ્ય માહિતી ભરો.");
+
+        return;
+
+    }
+
+
+    var oldAmount =
+        Number(collections[index].amount) || 0;
+
+
+    var totalPaidWithoutOld =
+        getCustomerPaid(loanNo) - oldAmount;
+
+
+    var baki =
+        Number(c.loanAmount) -
+        totalPaidWithoutOld;
+
+
+    if(amount > baki){
+
+        alert(
+            "વસૂલાત રકમ બાકી રકમ કરતાં વધારે ન હોઈ શકે."
+        );
+
+        return;
+
+    }
+
+
+    collections[index] = {
+
+        date:date,
+        loanNo:loanNo,
+        amount:amount
+
+    };
+
+
+    saveData();
+
+    alert("વસૂલાતની માહિતી અપડેટ થઈ.");
+
+    newCollection();
+
+    refreshAll();
+
+}
+
+
+function cancelCollectionEdit(){
+
+    newCollection();
+
+}
+
+
+/* HISTORY */
+
+function displayHistory(){
+
+    var search =
+        document.getElementById("historySearch")
+        .value.toLowerCase();
+
+    var html = "";
+
+
+    collections.forEach(function(c,index){
+
+        var customer =
+            getCustomer(c.loanNo);
+
+        var name =
+            customer ? customer.name : "ગ્રાહક મળ્યો નથી";
+
+
+        var text =
+            (
+                c.date + " " +
+                c.loanNo + " " +
+                name
+            ).toLowerCase();
+
+
+        if(search && !text.includes(search)){
+            return;
+        }
+
+
+        html += "<tr>";
+
+        html += "<td>" + formatDate(c.date) + "</td>";
+
+        html += "<td>" + c.loanNo + "</td>";
+
+        html += "<td>" + name + "</td>";
+
+        html += "<td>" + money(c.amount) + "</td>";
+
+        html += "<td>";
+
+        html +=
+            "<button class='btn' onclick='editCollection("+
+            index+
+            ")'>ફેરફાર</button>";
+
+        html +=
+            "<button class='btn-danger' onclick='deleteCollection("+
+            index+
+            ")'>કાઢો</button>";
+
+        html += "</td>";
+
+        html += "</tr>";
+
+    });
+
+
+    document.getElementById("historyTable")
+        .innerHTML = html;
+
+}
+
+
+function deleteCollection(index){
+
+    if(!confirm("શું આ વસૂલાત કાઢવી છે?")){
+        return;
+    }
+
+
+    collections.splice(index,1);
+
+    saveData();
+
+    refreshAll();
+
+}
+
+
+function formatDate(date){
+
+    if(!date){
+        return "";
+    }
+
+    var p = date.split("-");
+
+    if(p.length !== 3){
+        return date;
+    }
+
+    return p[2] + "/" + p[1] + "/" + p[0];
+
+}
+
+
+/* DATE REPORT */
+
+function dateWiseReport(){
+
+    var date =
+        document.getElementById("reportDate").value;
+
+    var total = 0;
+
+    var rows = "";
+
+
+    collections.forEach(function(c){
+
+        if(c.date !== date){
+            return;
+        }
+
+
+        var customer =
+            getCustomer(c.loanNo);
+
+        var name =
+            customer ? customer.name : "";
+
+
+        total += Number(c.amount) || 0;
+
+
+        rows += "<tr>";
+
+        rows += "<td>" + c.loanNo + "</td>";
+
+        rows += "<td>" + name + "</td>";
+
+        rows += "<td>" + money(c.amount) + "</td>";
+
+        rows += "</tr>";
+
+    });
+
+
+    if(!rows){
+
+        rows =
+            "<tr><td colspan='3'>આ તારીખે કોઈ વસૂલાત નથી.</td></tr>";
+
+    }
+
+
+    document.getElementById("dateWiseResult")
+        .innerHTML =
+
+        "<table>" +
+
+        "<tr>" +
+        "<th>લોન નંબર</th>" +
+        "<th>ગ્રાહકનું નામ</th>" +
+        "<th>વસૂલાત</th>" +
+        "</tr>" +
+
+        rows +
+
+        "<tr class='total-row'>" +
+        "<td colspan='2'>કુલ</td>" +
+        "<td>" + money(total) + "</td>" +
+        "</tr>" +
+
+        "</table>";
+
+}
+
+
+/* MONTHLY REPORT */
+
+function monthlyReport(){
+
+    var month =
+        document.getElementById("reportMonth").value;
+
+    if(!month){
+        return;
+    }
+
+
+    var total = 0;
+
+    var rows = "";
+
+
+    collections.forEach(function(c){
+
+        if(c.date.substring(0,7) !== month){
+            return;
+        }
+
+
+        var customer =
+            getCustomer(c.loanNo);
+
+        var name =
+            customer ? customer.name : "";
+
+
+        total += Number(c.amount) || 0;
+
+
+        rows += "<tr>";
+
+        rows += "<td>" + formatDate(c.date) + "</td>";
+
+        rows += "<td>" + c.loanNo + "</td>";
+
+        rows += "<td>" + name + "</td>";
+
+        rows += "<td>" + money(c.amount) + "</td>";
+
+        rows += "</tr>";
+
+    });
+
+
+    if(!rows){
+
+        rows =
+            "<tr><td colspan='4'>આ મહિનામાં કોઈ વસૂલાત નથી.</td></tr>";
+
+    }
+
+
+    document.getElementById("monthlyResult")
+        .innerHTML =
+
+        "<table>" +
+
+        "<tr>" +
+        "<th>તારીખ</th>" +
+        "<th>લોન નંબર</th>" +
+        "<th>ગ્રાહકનું નામ</th>" +
+        "<th>વસૂલાત</th>" +
+        "</tr>" +
+
+        rows +
+
+        "<tr class='total-row'>" +
+        "<td colspan='3'>કુલ</td>" +
+        "<td>" + money(total) + "</td>" +
+        "</tr>" +
+
+        "</table>";
+
+}
+
+
+/* CUSTOMER MONTHLY SUMMARY */
+
+function customerMonthlySummary(){
+
+    var from =
+        document.getElementById("summaryFrom").value;
+
+    var to =
+        document.getElementById("summaryTo").value;
+
+
+    if(!from || !to){
+
+        alert("કૃપા કરીને તારીખથી અને તારીખ સુધી પસંદ કરો.");
+
+        return;
+
+    }
+
+
+    if(from > to){
+
+        alert("તારીખથી, તારીખ સુધી કરતાં નાની હોવી જોઈએ.");
+
+        return;
+
+    }
+
+
+    var totalLoan = 0;
+
+    var totalPeriodPaid = 0;
+
+    var totalPaid = 0;
+
+    var totalBaki = 0;
+
+    var rows = "";
+
+
+    customers.forEach(function(c){
+
+        var periodPaid = 0;
+
+        collections.forEach(function(col){
+
+            if(
+                String(col.loanNo) === String(c.loanNo) &&
+                col.date >= from &&
+                col.date <= to
+            ){
+
+                periodPaid += Number(col.amount) || 0;
+
+            }
+
+        });
+
+
+        var paid =
+            getCustomerPaid(c.loanNo);
+
+
+        var baki =
+            Math.max(
+                0,
+                Number(c.loanAmount) - paid
+            );
+
+
+        totalLoan += Number(c.loanAmount) || 0;
+
+        totalPeriodPaid += periodPaid;
+
+        totalPaid += paid;
+
+        totalBaki += baki;
+
+
+        rows += "<tr>";
+
+        rows += "<td>" + c.loanNo + "</td>";
+
+        rows += "<td>" + c.name + "</td>";
+
+        rows += "<td>" + money(c.loanAmount) + "</td>";
+
+        rows += "<td>" + money(periodPaid) + "</td>";
+
+        rows += "<td>" + money(paid) + "</td>";
+
+        rows += "<td>" + money(baki) + "</td>";
+
+        rows += "</tr>";
+
+    });
+
+
+    if(!rows){
+
+        rows =
+            "<tr><td colspan='6'>કોઈ ગ્રાહક નથી.</td></tr>";
+
+    }
+
+
+    rows +=
+
+        "<tr class='total-row'>" +
+
+        "<td colspan='2'>કુલ</td>" +
+
+        "<td>" + money(totalLoan) + "</td>" +
+
+        "<td>" + money(totalPeriodPaid) + "</td>" +
+
+        "<td>" + money(totalPaid) + "</td>" +
+
+        "<td>" + money(totalBaki) + "</td>" +
+
+        "</tr>";
+
+
+    document.getElementById("customerSummaryResult")
+        .innerHTML =
+
+        "<div id='customerSummaryPrintArea'>" +
+
+        "<h3>ગ્રાહક માસિક સારાંશ</h3>" +
+
+        "<p>" +
+        "<b>તારીખથી:</b> " +
+        formatDate(from) +
+        " &nbsp;&nbsp; " +
+
+        "<b>તારીખ સુધી:</b> " +
+        formatDate(to) +
+
+        "</p>" +
+
+        "<table>" +
+
+        "<tr>" +
+
+        "<th>લોન નંબર</th>" +
+
+        "<th>ગ્રાહકનું નામ</th>" +
+
+        "<th>કુલ લોન રકમ</th>" +
+
+        "<th>આ મહિનામાં ચૂકવેલ</th>" +
+
+        "<th>કુલ ચૂકવેલ</th>" +
+
+        "<th>કુલ બાકી</th>" +
+
+        "</tr>" +
+
+        rows +
+
+        "</table>" +
+
+        "</div>";
+
+}
+
+
+/* PRINT CUSTOMER SUMMARY */
+
+function printCustomerMonthlySummary(){
+
+    var area =
+        document.getElementById("customerSummaryPrintArea");
+
+
+    if(!area){
+
+        customerMonthlySummary();
+
+        area =
+            document.getElementById("customerSummaryPrintArea");
+
+    }
+
+
+    if(!area){
+
+        alert("પહેલા ગ્રાહક અહેવાલ બતાવો.");
+
+        return;
+
+    }
+
+
+    var printWindow =
+        window.open("", "_blank");
+
+
+    printWindow.document.write(
+
+        "<html>" +
+        "<head>" +
+
+        "<title>ગ્રાહક માસિક સારાંશ</title>" +
+
+        "<style>" +
+
+        "@page{size:A4 landscape;margin:15mm;}" +
+
+        "body{font-family:Arial,sans-serif;}" +
+
+        "h2,h3{text-align:center;}" +
+
+        "table{width:100%;border-collapse:collapse;}" +
+
+        "th,td{border:1px solid #000;padding:7px;text-align:center;}" +
+
+        "th{background:#eee;}" +
+
+        ".total-row{font-weight:bold;background:#f5f5f5;}" +
+
+        ".signature{margin-top:50px;text-align:right;}" +
+
+        "</style>" +
+
+        "</head>" +
+
+        "<body>" +
+
+        "<h2>દૈનિક ફાઇનાન્સ</h2>" +
+
+        area.innerHTML +
+
+        "<div class='signature'>સહી: ____________________</div>" +
+
+        "</body>" +
+
+        "</html>"
+
+    );
+
+
+    printWindow.document.close();
+
+    printWindow.focus();
+
+    setTimeout(function(){
+
+        printWindow.print();
+
+    },500);
+
+}
+
+
+/* BACKUP */
+
+function backupData(){
+
+    var data = {
+
+        customers:customers,
+
+        collections:collections,
+
+        backupDate:new Date().toISOString()
+
+    };
+
+
+    var blob =
+        new Blob(
+            [JSON.stringify(data,null,2)],
+            {type:"application/json"}
+        );
+
+
+    var url =
+        URL.createObjectURL(blob);
+
+
+    var a =
+        document.createElement("a");
+
+
+    var date =
+        todayString();
+
+
+    a.href = url;
+
+    a.download =
+        "Daily_Finance_Backup_" +
+        date +
+        ".json";
+
+
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+}
+
+
+function restoreData(event){
+
+    var file =
+        event.target.files[0];
+
+
+    if(!file){
+        return;
+    }
+
+
+    var reader =
+        new FileReader();
+
+
+    reader.onload = function(e){
+
+        try{
+
+            var data =
+                JSON.parse(e.target.result);
+
+
+            if(
+                !Array.isArray(data.customers) ||
+                !Array.isArray(data.collections)
+            ){
+
+                alert("આ યોગ્ય Daily Finance Backup ફાઇલ નથી.");
+
+                return;
+
+            }
+
+
+            if(!confirm(
+                "હાલનો ડેટા બદલીને Backupનો ડેટા લાવવો છે?"
+            )){
+
+                return;
+
+            }
+
+
+            customers = data.customers;
+
+            collections = data.collections;
+
+
+            saveData();
+
+            refreshAll();
+
+            alert("બેકઅપ સફળતાપૂર્વક પાછો આવ્યો.");
+
+        }
+        catch(err){
+
+            alert("Backup file વાંચવામાં ભૂલ થઈ.");
+
+        }
+
+    };
+
+
+    reader.readAsText(file);
+
+}
+
+
+/* DASHBOARD */
+
+function updateDashboard(){
+
+    var totalLoan = 0;
+
+    var totalPaid = 0;
+
+
+    customers.forEach(function(c){
+
+        totalLoan +=
+            Number(c.loanAmount) || 0;
+
+        totalPaid +=
+            getCustomerPaid(c.loanNo);
+
+    });
+
+
+    var totalBaki =
+        Math.max(
+            0,
+            totalLoan - totalPaid
+        );
+
+
+    var today =
+        todayString();
+
+    var todayTotal = 0;
+
+
+    collections.forEach(function(c){
+
+        if(c.date === today){
+
+            todayTotal +=
+                Number(c.amount) || 0;
+
+        }
+
+    });
+
+
+    document.getElementById("dashCustomers")
+        .innerText = customers.length;
+
+
+    document.getElementById("dashLoan")
+        .innerText = money(totalLoan);
+
+
+    document.getElementById("dashPaid")
+        .innerText = money(totalPaid);
+
+
+    document.getElementById("dashBaki")
+        .innerText = money(totalBaki);
+
+
+    document.getElementById("dashToday")
+        .innerText = money(todayTotal);
+
+}
+
+
+/* REFRESH */
+
+function refreshAll(){
+
+    updateDashboard();
+
+    displayCustomers();
+
+    displayHistory();
+
+    dateWiseReport();
+
+    monthlyReport();
+
+}
+
+
+/* START */
+
+function startApp(){
+
+    var today =
+        todayString();
+
+
+    document.getElementById("collectionDate")
+        .value = today;
+
+    document.getElementById("loanDate")
+        .value = today;
+
+
+    document.getElementById("reportDate")
+        .value = today;
+
+
+    /* NEW FILTER DEFAULT */
+
+    document.getElementById("loanFilterDate")
+        .value = today;
+
+
+    var d =
+        new Date();
+
+
+    var month =
+        d.getFullYear() +
+        "-" +
+        String(d.getMonth()+1).padStart(2,"0");
+
+
+    document.getElementById("reportMonth")
+        .value = month;
+
+
+    document.getElementById("loanFilterMonth")
+        .value = month;
+
+
+    loadLoanYears();
+
+    document.getElementById("loanFilterYear")
+        .value = String(d.getFullYear());
+
+
+    var firstDay =
+        d.getFullYear() +
+        "-" +
+        String(d.getMonth()+1).padStart(2,"0") +
+        "-01";
+
+
+    document.getElementById("summaryFrom")
+        .value = firstDay;
+
+
+    document.getElementById("summaryTo")
+        .value = today;
+
+
+    initOnline();
+
+    loadFromServer()
+        .then(function(){
+            refreshAll();
+        })
+        .catch(function(err){
+            console.error(err);
+            setCloudStatus("☁ Local mode — server load failed");
+            prepareLocalIds();
+            saveLocalData();
+            refreshAll();
+            alert("Online database સાથે જોડાણમાં ભૂલ આવી. હાલ app local data સાથે ચાલુ છે.");
+        });
+
+}
+
+
+
+/* =========================================
+   OLD DATA BULK IMPORT
+   Date: 31/08/2026
+   ========================================= */
+
+function importOldData(){
+
+    var oldData = [[51,51,"FIROZSHA MAKBBULSHA FAKIR",25000,22500,2500,250],[56,56,"HUSENBHAI AYUBBHAI MOVAR",30000,27900,2100,300],[57,57,"SHAHNAVAZ GULAMHUSEN MOVAR",20000,18200,1800,200],[58,58,"SULTANSHA FARIDSHA SHAHMADAR",10000,8700,1300,100],[59,59,"BHIKHUBHAI GANIBHAI PARMAR",10000,8000,2000,100],[60,60,"PRATIK HUSENBHAI GOSAI",20000,16400,3600,200],[61,61,"JAVIDBHAI MAHMADBHAI SHEKH",30000,23400,6600,300],[62,62,"SIKANDAR GULAMHUSEN SHEKHANI",20000,15600,4400,200],[63,63,"SARFARAJ DILAVARHUSEN ADHAM",10000,8100,1900,100],[64,64,"MUNIR UMARBHAI KASHMANI",10000,7700,2300,100],[65,65,"SIKANDAR FATEHBHAI SHERASIYA",150000,112500,37500,1500],[66,66,"SOYAB IKBALBHAI SHEKHANI",30000,22200,7800,300],[67,67,"ISHUBBHAI AHEMADBHAI BLOCH",20000,16000,4000,200],[68,68,"IKBALBHAI ABDULBHAI PINJARA",10000,7700,2300,100],[69,69,"YASMINBEN ABDULBHAI SHEKH",100000,71000,29000,10000],[70,70,"RAMESHBHAI MATRABHAI UKEDIYA",20000,15000,5000,200],[71,71,"AMIN FIROZBHAI FAKIR",10000,6900,3100,100],[72,72,"VIJAYBHAI DALICHAND MAHETA",50000,34500,15500,500],[73,73,"KALUBHAI ISHAKBHAI FAKIR",15000,9900,5100,150],[74,74,"VIJAYBHAI AMARSHIBHAI SAPRA",5000,3500,1500,50],[75,75,"DILAVARSHA AHAMADSHA FAKIR",30000,18900,11100,300],[76,76,"SAMIR YUNUSHBHAI GORI",100000,63000,37000,1000],[77,77,"RASULBHAI FATEHBHAI SHERASIYA",150000,90000,60000,1500],[78,78,"AZIZBHAI MAMADBHAI KAZI",15000,9450,5550,150],[80,80,"TAUFIK IKBALBHAI HERANJA",10000,6400,3600,100],[81,81,"IKBALBHAI USMANBHAI SHEKHANI",20000,11000,9000,200],[82,82,"MUMTAZBEN RASULBHAI SHERASIYA",50000,27500,22500,500],[83,83,"NAUMAN SALEMANBHAI KHALIFA",10000,5900,4100,100],[84,84,"KESHUBHAI GHOGHABHAI RANEVADIYA",60000,32400,27600,600],[85,85,"VANRAJ GOVINDBHAI DANTESARIYA",5000,2800,2200,50],[86,86,"MAKBULSHA AHAMADSHA FAKIR",25000,12000,13000,250],[87,87,"UMARBHAI ABUBHAI KASHMANI",20000,8600,11400,200],[88,88,"ALLARAKHA VALIMAMAD MOVAR",50000,24500,25500,500],[89,89,"SAMIRBHAI HUSENBHAI BLOCH",20000,8000,12000,200],[90,90,"ILFIZABEN SIKANDARBHAI SHEKHANI",20000,7800,12200,200],[91,91,"AARIFSHA DILAVARSHA FAKIR",10000,3800,6200,100],[92,92,"MEGHABEN MUKESHBHAI SAKARIYA",60000,22800,37200,600],[93,93,"DINESHBHAI GELABHAI CHAROLIYA",25000,10000,15000,250],[94,94,"NIRAV LALITBHAI SOLANKI",15000,5250,9750,150],[95,95,"ISMAIL HUSENBHAI SHERASIYA",100000,35000,65000,1000],[96,96,"ISMAIL JUSABBHAI MATVA",25000,10250,14750,250],[97,97,"AFZAL MAHMADBHAI ARAB",10000,4100,5900,100],[98,98,"ISMAIL IBRAHIMBHAI SUMRA",30000,10500,19500,300],[99,99,"ILABHAI USMANBHAI MATVA",20000,6800,13200,200],[100,100,"MAKBUL MAHMADBHAI BADI",200000,72000,128000,2000],[101,101,"SALMABEN ANVARBHAI KAZI",30000,10500,19500,300],[102,102,"ANISH HUSENBHAI MATHAKIYA",50000,17500,32500,500],[103,103,"JAVIDBHAI UMARBHAI MATVA",30000,8100,21900,300],[104,104,"HANIFBHAI ISHUBBHAI CHAUHAN",10000,9100,900,100],[105,105,"KARANSING DHAVALSING SISODIYA",15000,4050,10950,150],[106,106,"MUKESHBHAI MAVJIBHAI SAKARIYA",50000,11000,39000,500],[107,107,"FIROZ RAZAKBHAI KURESHI",15000,3150,11850,150],[108,108,"AHAMADSHA FARIDSHA FAKIR",15000,3000,12000,150],[109,109,"AMAN SULTANSHA SHAHMADAR",10000,2500,7500,100],[110,110,"RUSHTOMBHAI CHHOTUMIYA SAIYAD",10000,2400,7600,100],[111,111,"USMANGANI MAMADBHAI KARIYANI",50000,9000,41000,500],[112,112,"MAHMADONEN ABDULKARIM KAZI",15000,3150,11850,150],[113,113,"AMARSHIBHAI SAPRA",5000,1050,3950,50],[114,114,"ZAKIR IKBALBHAI SHEKHANI",30000,4200,25800,300],[115,115,"ROHIL RASULBHAI SHERASIYA",60000,7200,52800,600],[116,116,"RAHIMBHAI HAJIBHAI MANDHAT",15000,1950,13050,150],[117,117,"BHARATBHAI BALABHAI MAKWANA",5000,1500,3500,50],[118,118,"MUNAF ABUJIBHAI BHORANIYA",25000,4000,21000,250],[119,119,"HUSENBHAI IBRAHIMBHAI BLOCH",10000,800,9200,100],[120,120,"DILAVARHUSEN ALIBHAI ADHAM",10000,1100,8900,100],[121,121,"ABDULBHAI AKBARALI VORA",350000,24500,325500,3500],[122,122,"FARUKSHA KALUSHA FAKIR",10000,1100,8900,100],[123,123,"ASHOKBHAI MAGANBHAI THAKRANI",50000,2500,47500,500],[124,124,"NAUSHAD HANIFBHAI KURESHI",10000,100,9900,100],[125,125,"MAHEBUBBHAI AYUBBHAI MOVAR",25000,1750,23250,250]];
+
+    if(!confirm(
+        "31/08/2026ના 70 જૂના ગ્રાહકોનો ડેટા Import કરવો છે?\n\n" +
+        "Paid Amount પણ 31/08/2026ની collection તરીકે ઉમેરાશે."
+    )){
+        return;
+    }
+
+    var imported = 0;
+    var skipped = 0;
+
+    oldData.forEach(function(r){
+
+        var loanNo = String(r[0]);
+        var customerNo = String(r[1]);
+
+        var alreadyExists = customers.some(function(c){
+            return String(c.loanNo) === loanNo ||
+                   String(c.customerNo) === customerNo;
+        });
+
+        if(alreadyExists){
+            skipped++;
+            return;
+        }
+
+        customers.push({
+            loanNo: loanNo,
+            customerNo: customerNo,
+            name: r[2],
+            loanDate: "",
+            loanAmount: Number(r[3]),
+            dailyDue: Number(r[6])
+        });
+
+        if(Number(r[4]) > 0){
+            collections.push({
+                date: "2026-08-31",
+                loanNo: loanNo,
+                amount: Number(r[4])
+            });
+        }
+
+        imported++;
+
+    });
+
+    saveData();
+    refreshAll();
+
+    alert(
+        "Bulk Import પૂર્ણ.\n\n" +
+        "નવા ગ્રાહકો ઉમેરાયા: " + imported + "\n" +
+        "પહેલેથી હતા એટલે Skip: " + skipped
+    );
+
+}
+
+startApp();
+
+</script>
+
+</body>
+</html>
