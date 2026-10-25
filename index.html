@@ -715,6 +715,21 @@ th{
 
     </div>
 
+    <!-- 4. તારીખ મુજબ બાકી લોન અહેવાલ -->
+    <div class="card">
+        <h3>4. તારીખ મુજબ બાકી લોન અહેવાલ</h3>
+        <div class="form-grid">
+            <div>
+                <label>હિસાબની તારીખ પસંદ કરો</label>
+                <input type="date" id="pendingReportDate">
+            </div>
+        </div>
+        <br>
+        <button class="btn" onclick="pendingLoanReport()">બાકી લોન બતાવો</button>
+        <button class="btn-success" onclick="printPendingLoanReport()">🖨️ રિપોર્ટ પ્રિન્ટ કરો</button>
+        <div id="pendingLoanReportResult"></div>
+    </div>
+
 </div>
 
 
@@ -2779,6 +2794,40 @@ function printCustomerMonthlySummary(){
 }
 
 
+
+/* =========================================
+   DATE-WISE PENDING LOAN REPORT
+   ========================================= */
+function pendingLoanReport(){
+    var endDate = document.getElementById("pendingReportDate").value;
+    if(!endDate){ alert("કૃપા કરીને હિસાબની તારીખ પસંદ કરો."); return; }
+    var rows = "", totalLoan = 0, totalPaid = 0, totalBaki = 0, count = 0;
+    customers.forEach(function(c){
+        if(c.loanDate && c.loanDate > endDate) return;
+        var loan = Number(c.loanAmount) || 0;
+        var paid = getPaidUntilDate(c.loanNo, endDate);
+        var baki = Math.max(0, loan - paid);
+        if(baki <= 0) return;
+        count++; totalLoan += loan; totalPaid += paid; totalBaki += baki;
+        rows += "<tr><td>" + c.loanNo + "</td><td>" + c.customerNo + "</td><td>" + c.name + "</td><td>" + (c.loanDate ? formatDate(c.loanDate) : "જૂનો ડેટા") + "</td><td>" + money(loan) + "</td><td>" + money(paid) + "</td><td>" + money(baki) + "</td></tr>";
+    });
+    if(!rows) rows = "<tr><td colspan='7'>આ તારીખે કોઈ બાકી લોન નથી.</td></tr>";
+    rows += "<tr class='total-row'><td colspan='4'>કુલ (" + count + " બાકી લોન)</td><td>" + money(totalLoan) + "</td><td>" + money(totalPaid) + "</td><td>" + money(totalBaki) + "</td></tr>";
+    document.getElementById("pendingLoanReportResult").innerHTML = "<div id='pendingLoanReportPrintArea'><h3>તારીખ મુજબ બાકી લોન અહેવાલ</h3><p><b>હિસાબની તારીખ:</b> " + formatDate(endDate) + "</p><div style='overflow:auto;'><table><tr><th>લોન નંબર</th><th>ગ્રાહક નંબર</th><th>ગ્રાહકનું નામ</th><th>લોન તારીખ</th><th>લોન રકમ</th><th>તે તારીખ સુધી ચૂકવેલ</th><th>બાકી રકમ</th></tr>" + rows + "</table></div></div>";
+}
+
+function printPendingLoanReport(){
+    if(!document.getElementById("pendingReportDate").value){ alert("પહેલા હિસાબની તારીખ પસંદ કરો."); return; }
+    pendingLoanReport();
+    var area = document.getElementById("pendingLoanReportPrintArea");
+    if(!area){ alert("રિપોર્ટ મળ્યો નથી."); return; }
+    var printWindow = window.open("", "_blank");
+    if(!printWindow){ alert("Print window ખુલ્યું નથી. Browserમાં popup allow કરો."); return; }
+    printWindow.document.write("<html><head><meta charset='UTF-8'><title>તારીખ મુજબ બાકી લોન અહેવાલ</title><style>@page{size:A4 landscape;margin:12mm;}body{font-family:Arial,sans-serif;}h2,h3,p{text-align:center;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:6px;text-align:center;}th{background:#eee;}.total-row{font-weight:bold;background:#f5f5f5;}</style></head><body><h2>દૈનિક ફાઇનાન્સ</h2>" + area.innerHTML + "</body></html>");
+    printWindow.document.close(); printWindow.focus();
+    setTimeout(function(){ printWindow.print(); }, 500);
+}
+
 /* BACKUP */
 
 function backupData(){
@@ -2989,6 +3038,8 @@ function startApp(){
     var today =
         todayString();
 
+
+    document.getElementById("pendingReportDate").value = today;
 
     document.getElementById("collectionDate")
         .value = today;
